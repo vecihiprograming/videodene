@@ -1,0 +1,51 @@
+gpu_info = !nvidia-smi
+gpu_info = '\n'.join(gpu_info)
+if gpu_info.find('failed') >= 0:
+  print('Not connected to a GPU')
+else:
+  print(gpu_info)
+
+from psutil import virtual_memory
+ram_gb = virtual_memory().total / 1e9
+print('Your runtime has {:.1f} gigabytes of available RAM\n'.format(ram_gb))
+
+if ram_gb < 20:
+  print('Not using a high-RAM runtime')
+else:
+  print('You are using a high-RAM runtime!')
+
+%%capture
+!git clone https://github.com/vecihiprograming/videodene
+
+!wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=169ZlCa7zINJOfXqcEKq__ugyHuL7h84E' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=169ZlCa7zINJOfXqcEKq__ugyHuL7h84E" -O torch.rar && rm -rf /tmp/cookies.txt
+
+!unrar x -Y "torch.rar" "/root"
+
+!chmod -R +x torch
+
+!bash torch/install-deps
+
+!cp /content/drive/MyDrive/bb2.sh /root/torch
+
+cd torch
+
+!chmod -R +x /root/torch
+
+!./bb2.sh
+
+
+!cp /content/drive/MyDrive/videos.rar /root/videodene
+
+!unrar x -Y videos.rar
+
+cd torch/install/bin
+
+!source ./torch-activate
+
+!git config --global url.https://github.com/.insteadOf git://github.com/
+
+!./luarocks install tds
+
+cd /root/desktop-tutorial/deneme
+
+!./../../torch/install/bin/th clbemre.lua
