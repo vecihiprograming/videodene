@@ -81,9 +81,9 @@ torch.setdefaulttensortype('torch.FloatTensor')
 
 -- create train data loader
 local DataLoader = paths.dofile('data/data.lua')
-opt.data = '../lfw_funneled_dev_128/train/'
+opt.data = './lfw_funneled_dev_128/train/'
 local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
-opt.data = '../lfw_funneled_dev_128/test/'
+opt.data = './lfw_funneled_dev_128/test/'
 local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
 print("Dataset: " .. opt.dataset, " Size: ", data:size())
 ----------------------------------------------------------------------------
@@ -116,7 +116,7 @@ else
   ----------------------- locator net -----------------------
   -- Encode the (x,y) -- coordinate of last attended patch
   local locationSensor = nn.Sequential()
-  locationSensor:add(nn.Linear(2, opt.locatorHiddenSize)) --nn.Linear  =>https://pythonguides.com/pytorch-nn-linear/
+  locationSensor:add(nn.Linear(2, opt.locatorHiddenSize))
   locationSensor:add(nn.BatchNormalization(opt.locatorHiddenSize)):add(nn.ReLU(true))
   -- Encode the low-resolution input image
   local imageSensor = nn.Sequential()
@@ -130,8 +130,8 @@ else
   imageErrSensor:add(nn.BatchNormalization(opt.wholeImageHiddenSize)):add(nn.ReLU(true))
   -- rnn input
   glimpse = nn.Sequential()
-  glimpse:add(nn.ParallelTable():add(locationSensor):add(imageErrSensor):add(imageSensor)) -- nn.ParallelTable https://nn.readthedocs.io/en/rtd/table/index.html
-  glimpse:add(nn.JoinTable(1,1)) --ikinci 1 tek sütunda birleştirdi. birinci 1 her tensörden 1 örnek aldı. https://nn.readthedocs.io/en/rtd/table/index.html
+  glimpse:add(nn.ParallelTable():add(locationSensor):add(imageErrSensor):add(imageSensor))
+  glimpse:add(nn.JoinTable(1,1))
   glimpse:add(nn.Linear(opt.wholeImageHiddenSize+opt.locatorHiddenSize+opt.wholeImageHiddenSize, opt.imageHiddenSize))
   glimpse:add(nn.BatchNormalization(opt.imageHiddenSize)):add(nn.ReLU(true))
   glimpse:add(nn.Linear(opt.imageHiddenSize, opt.hiddenSize))
@@ -203,7 +203,7 @@ else
   local patch = nn.SpatialGlimpse(opt.glimpsePatchSize, opt.glimpseDepth, opt.glimpseScale)({image, loc})
   local patch_pre = nn.SpatialGlimpse(opt.glimpsePatchSize, opt.glimpseDepth, opt.glimpseScale)({image_pre, loc})
   local SR_patch_fc_o = SR_patch_fc({patch, patch_pre})
-  local SR_img_fc_o = SR_img_fc({imageimageimage, image_pre})
+  local SR_img_fc_o = SR_img_fc({image, image_pre})
   local SR_fc_o = SR_fc(h)
   local hr_patch = SRnet({patch, patch_pre, SR_patch_fc_o, SR_img_fc_o, SR_fc_o})
   if opt.residual then hr_patch = nn.Tanh()(nn.CAddTable()({hr_patch,patch_pre})) end
