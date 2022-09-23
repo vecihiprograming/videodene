@@ -90,7 +90,7 @@ function dataset:__init(...)
 
    -- argcheck
    local args =  initcheck(...)
-   print('args**********************',args[1])
+   print(args)
    for k,v in pairs(args) do self[k] = v end
 
    if not self.loadSize then self.loadSize = self.sampleSize; end
@@ -105,7 +105,6 @@ function dataset:__init(...)
       for k,v in pairs(self.forceClasses) do
          self.classes[k] = v
          classPaths[k] = {}
-		 -- print(k,v)
       end
    end
    local function tableFind(t, o) for k,v in pairs(t) do if v == o then return k end end end
@@ -314,7 +313,6 @@ end
 function dataset:getByClass(class)
    local index = math.ceil(torch.uniform() * self.classListSample[class]:nElement())
    local imgpath = ffi.string(torch.data(self.imagePath[self.classListSample[class][index]]))
-   --print('dataset:getByClass(class) girdiiik')
    return self:sampleHookTrain(imgpath)
 end
 
@@ -325,12 +323,9 @@ local function tableToOutput(self, dataTable, scalarTable)
    assert(dataTable[1]:dim() == 3)
    data = torch.Tensor(quantity,
 		       self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
-			   --print('data = torch.Tensor',data[1])
    scalarLabels = torch.LongTensor(quantity):fill(-1111)
-   --print('dataTable',#dataTable)--buna girdik
    for i=1,#dataTable do
       data[i]:copy(dataTable[i])
-	  --print('data',data[1])
       scalarLabels[i] = scalarTable[i]
    end
    return data, scalarLabels
@@ -345,7 +340,6 @@ function dataset:getByClasses(classes)
       local out = self:getByClass(class)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
-	  --print('dataset:getByClasses out___________________________',out)--buna girmedik
    end
    local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
    return data, scalarLabels
@@ -361,7 +355,6 @@ function dataset:sample(quantity)
       local out = self:getByClass(class)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
-	  --print('dataset:sample(quantity) out___________________',out) --buna girdik
    end
    local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
    return data, scalarLabels
@@ -369,7 +362,7 @@ end
 
 function dataset:get(i1, i2)
    local indices = torch.range(i1, i2);
-   local quantity = i2 - i1 + 1;       --quantity = batch size çıkıyor
+   local quantity = i2 - i1 + 1;
    assert(quantity > 0)
    -- now that indices has been initialized, get the samples
    local dataTable = {}
@@ -379,7 +372,6 @@ function dataset:get(i1, i2)
       -- load the sample
       local imgpath = ffi.string(torch.data(self.imagePath[indices[i]]))
       local out = self:sampleHookTest(imgpath)
-	  --print('dataset:get(i1, i2) out_______________________________________',out)--buna girmedi
       table.insert(dataTable, out)
       table.insert(scalarTable, self.imageClass[indices[i]])
       table.insert(impath, imgpath)
