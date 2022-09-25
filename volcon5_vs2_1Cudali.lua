@@ -72,14 +72,23 @@ opt.highResSize = {128, 128} -- h w olarak dusundum ve sadece bu dosyayı ona go
 -- neden ımage.load h ve w okuyor. o sekılde dusundum
 opt.lowResSize = {16, 16}
 
+
 -- create data loader
 local DataLoader = paths.dofile('data/data2.lua')
-opt.data = './videos/IJBC_128_96_new/train/'
+opt.data = './videostraintest/train'
 local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
 print("Dataset: " .. opt.dataset, " Size: ", data:size())
-opt.data = './videos/IJBC_128_96_new/test/'
+opt.data =  './videostraintest/test'
 local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
 print("Dataset: " .. opt.dataset, " Size: ", data:size())
+-- -- create data loader
+-- local DataLoader = paths.dofile('data/data2.lua')
+-- opt.data = './videos/IJBC_128_96_new/train/'
+-- local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
+-- print("Dataset: " .. opt.dataset, " Size: ", data:size())
+-- opt.data = './videos/IJBC_128_96_new/test/'
+-- local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
+-- print("Dataset: " .. opt.dataset, " Size: ", data:size())
 --------------------------------------------------------------
 -- local patch size
 local PatchSize = {}
