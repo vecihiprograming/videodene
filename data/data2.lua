@@ -69,8 +69,9 @@ function data._getFromThreads(i1i2)
    assert(opt.batchSize, 'opt.batchSize not found')
    if i1i2 then   
 		if torch.type(i1i2) == 'table' then
-		  return trainLoader:get(i1i2[1], i1i2[2])
+		  return trainLoader:EAget(i1i2[1], i1i2[2])
 		else
+		  error('table altında error koydum')
 		  return trainLoader:getByClasses(i1i2)
 		end
    else

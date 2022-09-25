@@ -427,15 +427,10 @@ end
 
 -- getByClass
 function dataset:getByClass(class)
-	-- print('torch.uniform()',torch.uniform()) -- buna bakalim 
-	-- print('self.classListSample[class]:nElement()',self.classListSample[class]:nElement()) -- buna bakalim 
-	-- print(math.ceil(torch.uniform() * self.classListSample[class]:nElement()))
    local index = math.ceil(torch.uniform() * self.classListSample[class]:nElement())
    local imgpath = ffi.string(torch.data(self.imagePath[self.classListSample[class][index]]))
-   print('imgpath',imgpath)
    return self:sampleHookTrain(imgpath)
 end
-
 -- getByClass
 function dataset:EAgetByClass(class) --bs x f x 3 x w x h icin
 	local index = math.ceil(torch.uniform() * self.classListSample[class]:nElement())
@@ -445,7 +440,6 @@ function dataset:EAgetByClass(class) --bs x f x 3 x w x h icin
 
 end
 -- converts a table of samples (and corresponding labels) to a clean tensor
-
 local function EAtableToOutput(self, dataTable, scalarTable)
    local data, scalarLabels, labels
    local quantity = #dataTable
@@ -464,7 +458,6 @@ local function EAtableToOutput(self, dataTable, scalarTable)
    return data, scalarLabels
 end
 -- converts a table of samples (and corresponding labels) to a clean tensor
-
 local function tableToOutput(self, dataTable, scalarTable)
    local data, scalarLabels, labels
    local quantity = #scalarTable
@@ -500,16 +493,13 @@ function dataset:sample(quantity)
    local scalarTable = {}
    for i=1,quantity do
       local class = torch.random(1, #self.classes)
-	  --print('class',class)
       local out = self:getByClass(class)
-	  --print('out',out)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
    end
    local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
    return data, scalarLabels
 end
-
 -- sampler, samples from the training set.
 function dataset:EAsample(quantity)
    print('datasetyeni_sample_fonksiyonu_basliyor')
@@ -518,16 +508,13 @@ function dataset:EAsample(quantity)
    local scalarTable = {}
    for i=1,quantity do
       local class = torch.random(1, #self.classes)
-	  --print('class',class)
       local out = self:EAgetByClass(class)
-	  --print('out',out)
       table.insert(dataTable, out)
       table.insert(scalarTable, class)
    end
    local data, scalarLabels = EAtableToOutput(self, dataTable, scalarTable)
    return data, scalarLabels
 end
-
 function dataset:get(i1, i2)
    local indices = torch.range(i1, i2);
    local quantity = i2 - i1 + 1;
@@ -545,6 +532,25 @@ function dataset:get(i1, i2)
       table.insert(impath, imgpath)
    end
    local data, scalarLabels = tableToOutput(self, dataTable, scalarTable)
+   return data, impath, scalarLabels
+end
+function dataset:EAget(i1, i2)
+   local indices = torch.range(i1, i2);
+   local quantity = i2 - i1 + 1;
+   assert(quantity > 0)
+   -- now that indices has been initialized, get the samples
+   local dataTable = {}
+   local scalarTable = {}
+   local impath = {}
+   for i=1,quantity do
+      -- load the sample
+      local imgpath = ffi.string(torch.data(self.imagePath[indices[i]]))
+      local out = self:sampleHookTest(imgpath)
+      table.insert(dataTable, out)
+      table.insert(scalarTable, self.imageClass[indices[i]])
+      table.insert(impath, imgpath)
+   end
+   local data, scalarLabels = EAtableToOutput(self, dataTable, scalarTable)
    return data, impath, scalarLabels
 end
 

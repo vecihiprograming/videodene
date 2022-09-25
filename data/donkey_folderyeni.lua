@@ -149,7 +149,7 @@ if paths.filep(trainCache) then
    trainLoader.sampleHookTest = EAtrainHook
    trainLoader.loadSize = {opt.nc, opt.loadSize[1], opt.loadSize[2]}
    trainLoader.sampleSize = {opt.nc, sampleSize[1], sampleSize[2]}
-   print(trainLoader.loadSize[3])
+   --print(trainLoader.loadSize[3])
 else
    print('Creating train metadata---------------------')
    trainLoader = dataLoader{

@@ -25,7 +25,7 @@ opt = lapp[[
    --ntrain                   (default math.huge) #  of examples per epoch. math.huge for full dataset
    --display                  (default 0)         display samples while training. 0 = false
    --display_id               (default 10)        display window id.
-   --gpu                      (default 1)         gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
+   --gpu                      (default 0)         gpu = 0 is CPU mode. gpu=X is GPU mode on GPU X
    --GAN_loss_after_epoch     (default 5)
    --name                     (default 'fullmodel')
    --data_root                (default './videos/IJBC_128_96_new/GT/')
@@ -55,7 +55,7 @@ opt = lapp[[
    --hiddenSize               (default 512)   number of hidden units used in Simple RNN.
    --FastLSTM                 (default 1)     use LSTM instead of linear layer
    --BN                                       whether use BatchNormalization
-   --save_im                                  whether save image on test
+   --save_im                  (default 1)                                  whether save image on test
 ]]
 
 for k,v in pairs(opt) do opt[k] = tonumber(os.getenv(k)) or os.getenv(k) or opt[k] end
@@ -76,10 +76,10 @@ opt.lowResSize = {16, 16}
 local DataLoader = paths.dofile('data/data2.lua')
 opt.data = './videos/IJBC_128_96_new/train/'
 local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
---print("Dataset: " .. opt.dataset, " Size: ", data:size())
+print("Dataset: " .. opt.dataset, " Size: ", data:size())
 opt.data = './videos/IJBC_128_96_new/test/'
 local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
---print("Dataset: " .. opt.dataset, " Size: ", data:size())
+print("Dataset: " .. opt.dataset, " Size: ", data:size())
 --------------------------------------------------------------
 -- local patch size
 local PatchSize = {}
@@ -300,6 +300,8 @@ local image_next5 = nn.SpatialGlimpse_inverse(opt.glimpsePatchSize, nil)({frame_
 local image_next6 = nn.SpatialGlimpse_inverse(opt.glimpsePatchSize, nil)({frame_pre6,hr_patch6,loc})
 local image_next7 = nn.SpatialGlimpse_inverse(opt.glimpsePatchSize, nil)({frame_pre7,hr_patch7,loc})
 
+print(hrs)
+
 knm=torch.rand(1,2)
 nngraph.annotateNodes()
 
@@ -348,6 +350,10 @@ baseline_R:add(nn.Add(1))
 local REINFORCE_Criterion = nn.VRMSEReward(model, opt.rewardScale, opt.rewardAreaScale)
 local MSEcriterion = nn.MSECriterion()
 
+
+function table.clone(org)
+	return {table.unpack(org)}
+end
 ---------------------------------------------------------------------------
 optimState = {
 learningRate = opt.lr,
@@ -364,15 +370,8 @@ if opt.gpu > 0 then
    cutorch.setDevice(opt.gpu)
    model:cuda()
    baseline_R:cuda()
-   MSEcriterion:cuda();      
-   REINFORCE_Criterion:cuda();
-   gt_glimpse1:cuda()
-   gt_glimpse2:cuda()
-   gt_glimpse3:cuda()
-   gt_glimpse4:cuda()
-   gt_glimpse5:cuda()
-   gt_glimpse6:cuda()
-   gt_glimpse7:cuda()
+   MSEcriterion:cuda();      REINFORCE_Criterion:cuda();
+   gt_glimpse:cuda()
 end
 -- model:forget()			
 local parameters, gradParameters = model:getParameters()
@@ -395,23 +394,16 @@ local fx = function(x)
 	lowRes = highRes:clone()
 	for basize=1,opt.batchSize do
 		for fr=1,opt.frameSize do
-			--print(basize,'===',fr)
+			print(basize,'===',fr)
 			temp = image.scale(highRes[basize][fr], opt.lowResSize[2], opt.lowResSize[1])
 			lowRes[basize][fr] = image.scale(temp, opt.highResSize[2], opt.highResSize[1], 'bicubic')
 		end
 	end	
-	highRes = highRes:cuda()
-	lowRes = lowRes:cuda()
 	-- print(lowRes)
 	local ones = torch.ones(opt.batchSize,1,opt.glimpsePatchSize[1],opt.glimpsePatchSize[2])
 	local visited_map0 = torch.zeros(opt.batchSize,1,highResSize[1],highResSize[2])
 	local zero_loc = torch.zeros(opt.batchSize,2)
 	local zero_dummy = torch.zeros(opt.batchSize,1)
-	
-	zero_loc = zero_loc:cuda()
-	zero_dummy = zero_dummy:cuda()
-	ones = ones:cuda()
-	visited_map0 = visited_map0:cuda()	
 	
 	local dl = {}
 	local inputs = {}
@@ -438,14 +430,12 @@ local fx = function(x)
 						lowRes[{{},{6},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 						lowRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 						visited_map0, ones }
-						--print('-=-=-')
-						--lowRes bs x 7 x 3 x 128 x96
-						-- lowRes[{{},{1},{}}] bs x 1 x 3 x 128 x96
-					    --break 
+						print('-=-=-')
 		else
-					inputs[t]=inputs[t-1]
+					inputs[t]=table.clone(inputs[t-1])
+					--inputs[t]=inputs[t-1]
 					-- outnedir=zero_loc,nextx7tane,visitedmap
-					videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2]):cuda()
+					local videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2])
 					-- outputs[t-1][2] bs x 3 x 128 x 96
 					videonexts[{{},{1},{}}]=outputs[t-1][2]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
 					videonexts[{{},{2},{}}]=outputs[t-1][3]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
@@ -454,11 +444,11 @@ local fx = function(x)
 					videonexts[{{},{5},{}}]=outputs[t-1][6]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
 					videonexts[{{},{6},{}}]=outputs[t-1][7]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
 					videonexts[{{},{7},{}}]=outputs[t-1][8]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
-					--print('vnn')
+					print('vnn')
 					--print(videonexts)
-					inputs[t][1]=outputs[t-1][1] -- locasyon
-					inputs[t][2]=videonexts -- video_pre parametresi
-					inputs[t][3]=lowRes 
+					inputs[t][1]=outputs[t-1][1]:clone() -- locasyon
+					inputs[t][2]=videonexts:clone()  -- video_pre parametresi
+					inputs[t][3]=lowRes:clone() 
 					inputs[t][4]= lowRes[{{},{1},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
 					inputs[t][5]= lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
 					inputs[t][6]= lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
@@ -466,18 +456,18 @@ local fx = function(x)
 					inputs[t][8]= lowRes[{{},{5},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
 					inputs[t][9]= lowRes[{{},{6},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
 					inputs[t][10]=lowRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2])
-					inputs[t][11]=outputs[t-1][2]
-					inputs[t][12]=outputs[t-1][3]
-					inputs[t][13]=outputs[t-1][4]
-					inputs[t][14]=outputs[t-1][5]
-					inputs[t][15]=outputs[t-1][6]
-					inputs[t][16]=outputs[t-1][7]
-					inputs[t][17]=outputs[t-1][8]
-					inputs[t][18]=outputs[t-1][9]
-					inputs[t][19]=ones
+					inputs[t][11]=outputs[t-1][2]:clone() 
+					inputs[t][12]=outputs[t-1][3]:clone() 
+					inputs[t][13]=outputs[t-1][4]:clone() 
+					inputs[t][14]=outputs[t-1][5]:clone() 
+					inputs[t][15]=outputs[t-1][6]:clone() 
+					inputs[t][16]=outputs[t-1][7]:clone() 
+					inputs[t][17]=outputs[t-1][8]:clone() 
+					inputs[t][18]=outputs[t-1][9]:clone() 
+					inputs[t][19]=ones:clone() 
 		end
 		outputs[t] = model:forward(inputs[t])
-		--print('---',outputs[t][1][1])
+		print('---')
 		-- highRes bs x 7 x 3 x 128 x 96
 		
 		-- gt[t] = gt_glimpse:forward{highRes[{{},{1},{}}]:reshape(opt.batchSize,3,128,96), 
@@ -492,7 +482,7 @@ local fx = function(x)
 		gt[t][7]=gt_glimpse7:forward{highRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),outputs[t][1] }:clone()
 		--print(gt[t])
 		--local MSE loss
-		videonew=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2]):cuda()
+		videonew=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2])
 		videonew[{{},{1},{}}]=outputs[t][2]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
 		videonew[{{},{2},{}}]=outputs[t][3]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
 		videonew[{{},{3},{}}]=outputs[t][4]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
@@ -536,22 +526,147 @@ local fx = function(x)
 		baseline_R:zeroGradParameters()
 		baseline_R:backward(zero_dummy, dg[3])
 		baseline_R:updateParameters(0.01)	
-		--print('sdsdfsdfsdfsdfsdf')
+		print('sdsdfsdfsdfsdfsdf')
 		return err_g, gradParameters		
 end
+
+function test()
+	print('test içi')
+	psnr = 0
+	model:evaluate()
+
+	paths.mkdir(opt.name)	
+	for st = 1,dataTest:size(),opt.batchSize do
+		model:forget()
+		--xlua.progress(st,dataTest:size())
+		--fetch data
+		local i2, quantity
+		if st + opt.batchSize > dataTest:size() then 
+			i2 = dataTest:size() 
+		else 
+			i2 = st + opt.batchSize - 1 
+		end
+		quantity = i2 - st + 1
+		highRes, impath,scaLabels = dataTest:getIndice({st,i2})	-- batchsıze kadar
+		lowRes = highRes:clone()
+		for basize=1,opt.batchSize do
+			for fr=1,opt.frameSize do
+				temp = image.scale(highRes[basize][fr], opt.lowResSize[2], opt.lowResSize[1])
+				lowRes[basize][fr] = image.scale(temp, opt.highResSize[2], opt.highResSize[1], 'bicubic')
+			end
+		end
+
+		highRes = highRes -- cuda ekle
+		lowRes = lowRes --cuda ekle	
+		local ones = torch.ones(opt.batchSize,1,opt.glimpsePatchSize[1],opt.glimpsePatchSize[2])
+		local visited_map0 = torch.zeros(opt.batchSize,1,highResSize[1],highResSize[2])
+		local zero_loc = torch.zeros(opt.batchSize,2)
+        ones=ones -- cuda ekle
+        visited_map0=visited_map0-- cuda ekle
+        zero_loc=zero_loc-- cuda ekle
+
+		local output_t
+		local input_t
+
+		for t = 1,rho do	
+			if t == 1 then
+				input_t= {zero_loc, lowRes,lowRes,
+					lowRes[{{},{1},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]), -- her vdeonun ilk frameları
+					lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{4},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{5},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{6},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{1},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{4},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{5},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{6},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					lowRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
+					visited_map0, ones }
+                print(input_t)
+			else
+				--input_t=input_t -- sıfırlama içindi
+                inputs={}
+                --inputs=table.clone(inputs)
+						-- -- outnedir=zero_loc,nextx7tane,visitedmap
+				local videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2])--cuda ekle
+				-- outputs[t-1][2] bs x 3 x 128 x 96
+				videonexts[{{},{1},{}}]=outputs[2]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{2},{}}]=outputs[3]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{3},{}}]=outputs[4]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{4},{}}]=outputs[5]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{5},{}}]=outputs[6]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{6},{}}]=outputs[7]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				videonexts[{{},{7},{}}]=outputs[8]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+				table.insert(inputs, outputs[1])--1
+				table.insert(inputs, videonexts)--2      
+                table.insert(inputs, lowRes)--3
+                table.insert(inputs, lowRes[{{},{1},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--4    
+                table.insert(inputs, lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--5
+                table.insert(inputs, lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--6 
+                table.insert(inputs, lowRes[{{},{4},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--7 
+                table.insert(inputs, lowRes[{{},{5},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--8      
+                table.insert(inputs, lowRes[{{},{6},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--9 
+                table.insert(inputs, lowRes[{{},{7},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]))--10 
+                table.insert(inputs, outputs[2])--11
+                table.insert(inputs, outputs[3])--12
+                table.insert(inputs, outputs[4])--13
+                table.insert(inputs, outputs[5])--14
+                table.insert(inputs, outputs[6])--15
+                table.insert(inputs, outputs[7])--16
+                table.insert(inputs, outputs[8])--17
+                table.insert(inputs, outputs[9])--18
+                table.insert(inputs,ones)--19
+			end
+			outputs = model:forward(input_t) --bs x 9
+		end
+        
+        print(outputs)
+
+        local videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2])--cuda ekle
+        -- outputs[t-1][2] bs x 3 x 128 x 96
+        videonexts[{{},{1},{}}]=outputs[2]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{2},{}}]=outputs[3]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{3},{}}]=outputs[4]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{4},{}}]=outputs[5]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{5},{}}]=outputs[6]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{6},{}}]=outputs[7]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
+        videonexts[{{},{7},{}}]=outputs[8]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])        
+
+        for i = 1,quantity do
+            -- 10* log10( 255^2 / (mse * (255/2)^2) )
+            psnr = psnr + 10 * math.log10(4 / MSEcriterion:forward(videonexts[i], highRes[i]))
+            if opt.save_im then
+                for j=1,opt.frameSize do
+                    local img = videonexts[{{i},{j},{}}]:reshape(3,highResSize[1],highResSize[2])
+                    img:add(1):div(2)
+                    image.save(opt.name..'/'..paths.basename(impath[i]..'/' .. 'im' .. j .. '.png'), img)                   
+                end
+
+            end
+        end        
+
+		
+		error('testttt')
+	end
+end
+
 
 -- train
 epoch =  0
 while epoch < opt.niter do
 	epoch = epoch+1
 	epoch_tm:reset()
-	--test()
+	test()
 	tm:reset()
 	--print('parameters1',parameters)
 	collectgarbage()
 	--fx()
 	optim.adam(fx, parameters, optimState)
-	a:copy(parameters)
+	--a:copy(parameters)
 	print('bitiiiii')
 	error('iiiiiiiiiiiiiiiiii')
 	
@@ -564,13 +679,3 @@ end
 -- local visited_map0 = torch.zeros(opt.batchSize,1,highResSize[1],highResSize[2])	
 -- local ones = torch.ones(opt.batchSize,1,opt.glimpsePatchSize[1],opt.glimpsePatchSize[2])		
 -- a1=model:forward{knm,videos,videos,
-
-
--- create data loader
-local DataLoader = paths.dofile('data/data2.lua')
-opt.data = './videostraintest/train'
-local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
-print("Dataset: " .. opt.dataset, " Size: ", data:size())
-opt.data =  './videostraintest/test'
-local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
-print("Dataset: " .. opt.dataset, " Size: ", data:size())
