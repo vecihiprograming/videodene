@@ -96,17 +96,17 @@ function dataset:__init(...)
    local args =  initcheck(...)
    for k,v in pairs(args) do 
 	self[k] = v 
-	print('DATASETYENI-->> args parametreleri','k :',k , ', v :',v  )
+	--print('DATASETYENI-->> args parametreleri','k :',k , ', v :',v  )
    end
 
    if not self.loadSize then 
 	self.loadSize = self.sampleSize; 
-	print('DATASETYENI-->> self.loadSize', self.loadSize ) --calismadi
+	--print('DATASETYENI-->> self.loadSize', self.loadSize ) --calismadi
    end
 
    if not self.sampleHookTrain then 
 	self.sampleHookTrain = self.defaultSampleHook
-	print('DATASETYENI-->> self.sampleHookTrain', self.sampleHookTrain ) --nil geliyor	
+	--print('DATASETYENI-->> self.sampleHookTrain', self.sampleHookTrain ) --nil geliyor	
    end
    if not self.sampleHookTest then 
 	self.sampleHookTest = self.defaultSampleHook -- bu da nil gelir
@@ -137,9 +137,9 @@ function dataset:__init(...)
    -- loop over each paths folder, get list of unique class names,
    -- also store the directory paths per class
    -- for each class,
-   print('self.paths',#self.paths)
+   --print('self.paths',#self.paths)
    for k,path in ipairs(self.paths) do
-	  print('dataset path',path) -- ./lfw_funneled_dev_128/train/
+	  --print('dataset path',path) -- ./lfw_funneled_dev_128/train/
       local dirs = dir.getdirectories(path);
 		  
       for k,dirpath in ipairs(dirs) do
@@ -208,7 +208,7 @@ function dataset:__init(...)
    self.classList = {}                  -- index of imageList to each image of a particular class
    self.classListSample = self.classList -- the main list used when sampling data
 
-   print('running "find" on each class directory, and concatenate all'
+   --print('running "find" on each class directory, and concatenate all'
          .. ' those filenames into a single file containing all image paths for a given class')
    -- so, generat
    local classFindFiles = {}
@@ -217,7 +217,7 @@ function dataset:__init(...)
    end
    --print(#classFindFiles)--2792
    local combinedFindList = os.tmpname();
-   print('combinedFindList',combinedFindList)
+   --print('combinedFindList',combinedFindList)
    -- burada tum resim yollari var
 
    local tmpfile = os.tmpname()
@@ -445,10 +445,10 @@ local function EAtableToOutput(self, dataTable, scalarTable)
    local quantity = #dataTable
    assert(dataTable[1]:dim() == 4)
    -- data = torch.Tensor(quantity,self.frameSize, 3, self.oW, self.oH)
-   print(self.sampleSize[1], self.sampleSize[3], self.sampleSize[2])
+   --print(self.sampleSize[1], self.sampleSize[3], self.sampleSize[2])
 
    data = torch.Tensor(quantity,self.fs,self.sampleSize[1], self.sampleSize[3], self.sampleSize[2])
-   print('=============='..self.sampleSize[1])
+   --print('=============='..self.sampleSize[1])
    scalarLabels = torch.LongTensor(quantity):fill(-1111)
    
    for i=1,#dataTable do
@@ -464,7 +464,7 @@ local function tableToOutput(self, dataTable, scalarTable)
    assert(dataTable[1]:dim() == 3)
    data = torch.Tensor(quantity,self.frameSize, 3, self.oW, self.oH)
    -- data = torch.Tensor(quantity,self.fs,self.sampleSize[1], self.sampleSize[2], self.sampleSize[3])
-   print('=============='..self.sampleSize[1])
+   --print('=============='..self.sampleSize[1])
    scalarLabels = torch.LongTensor(quantity):fill(-1111)
    for i=1,#dataTable do
       data[i]:copy(dataTable[i])
@@ -487,7 +487,7 @@ function dataset:getByClasses(classes)
 end
 -- sampler, samples from the training set.
 function dataset:sample(quantity)
-   print('datasetyeni_sample_fonksiyonu_basliyor')
+   --print('datasetyeni_sample_fonksiyonu_basliyor')
    assert(quantity)
    local dataTable = {}
    local scalarTable = {}
@@ -502,7 +502,7 @@ function dataset:sample(quantity)
 end
 -- sampler, samples from the training set.
 function dataset:EAsample(quantity)
-   print('datasetyeni_sample_fonksiyonu_basliyor')
+   --print('datasetyeni_sample_fonksiyonu_basliyor')
    assert(quantity)
    local dataTable = {}
    local scalarTable = {}

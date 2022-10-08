@@ -75,7 +75,7 @@ function data._getFromThreads(i1i2)
 		  return trainLoader:getByClasses(i1i2)
 		end
    else
-		print('DATA2 -> function data._getFromThreads(i1i2) else blogu')
+		--print('DATA2 -> function data._getFromThreads(i1i2) else blogu')
 		-- return trainLoader:sample(opt.batchSize)
 		return trainLoader:EAsample(opt.batchSize)
    end
