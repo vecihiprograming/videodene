@@ -345,7 +345,7 @@ local fx = function(x)
 	lowRes = highRes:clone()
 	for basize=1,opt.batchSize do
 		for fr=1,opt.frameSize do
-			print(basize,'===',fr)
+			--print(basize,'===',fr)
 			temp = image.scale(highRes[basize][fr], opt.lowResSize[2], opt.lowResSize[1])
 			lowRes[basize][fr] = image.scale(temp, opt.highResSize[2], opt.highResSize[1], 'bicubic')
 		end
@@ -379,7 +379,7 @@ local fx = function(x)
 				lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 				lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 				visited_map0, ones }
-				print('-=-=-')
+				--print('-=-=-')
 		else
 			inputs[t]={}
 			local videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2]):cuda()
@@ -400,7 +400,7 @@ local fx = function(x)
 			table.insert(inputs[t],ones)--11 ones
 		end
 		outputs[t] = model:forward(inputs[t])
-		print('---')
+		--print('---')
 
 		videonew=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2]):cuda()
 		videonew[{{},{1},{}}]=outputs[t][2]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])
@@ -433,7 +433,7 @@ local fx = function(x)
 		baseline_R:zeroGradParameters()
 		baseline_R:backward(zero_dummy, dg[3])
 		baseline_R:updateParameters(0.01)	
-		print('sdsdfsdfsdfsdfsdf')
+		--print('sdsdfsdfsdfsdfsdf')
 		return err_g, gradParameters		
 end
 
@@ -487,7 +487,7 @@ function test()
 					lowRes[{{},{2},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 					lowRes[{{},{3},{}}]:reshape(opt.batchSize,3,highResSize[1],highResSize[2]),
 					visited_map0, ones }
-                print(input_t)
+                --print(input_t)
 			else
 
                 input_t={}
@@ -511,7 +511,7 @@ function test()
 			outputs = model:forward(input_t) --bs x 9
 		end
         
-        print(outputs)
+        --print(outputs)
 
         local videonexts=torch.zeros(opt.batchSize,opt.frameSize,3,highResSize[1],highResSize[2]):cuda()
         -- outputs[t-1][2] bs x 3 x 128 x 96
@@ -520,8 +520,8 @@ function test()
         videonexts[{{},{3},{}}]=outputs[4]:reshape(opt.batchSize,1,3,highResSize[1],highResSize[2])     
 
         for i = 1,quantity do
-			print(impath[i])
-			print(paths.basename(impath[i]))
+			--print(impath[i])
+			--print(paths.basename(impath[i]))
 			os.execute("rm -r " .. opt.name..'/'.. paths.basename(impath[i]))
 			os.execute("mkdir " .. opt.name..'/'.. paths.basename(impath[i]))
 
@@ -554,22 +554,37 @@ end
 -- train
 epoch =  0
 while epoch < opt.niter do
-	epoch = epoch+1
-	epoch_tm:reset()
-	test()
-	tm:reset()
-	--print('parameters1',parameters)
-	collectgarbage()
-	--fx()
-	optim.adam(fx, parameters, optimState)
-	a:copy(parameters)
-	print('bitiiiii')
-	error('iiiiiiiiiiiiiiiiii_EROR_KAPAT')
-	
-	--a:copy(parameters)
-	--print('a',a)
-	--print('parameters2',parameters)
-   --optim.adam(fx, parameters, optimState)
+   epoch = epoch+1
+   epoch_tm:reset()
+   test()
+   local counter = 0
+   local counter_test = 0
+   for i = 1, math.min(data:size(), opt.ntrain), opt.batchSize do
+      collectgarbage()
+      tm:reset()
+
+      -- update model
+      optim.adam(fx, parameters, optimState)
+      a:copy(parameters)
+
+      -- logging
+      if ((i-1) / opt.batchSize) % 1 == 0 then
+         print(('Epoch: [%d][%8d / %8d]\t Time: %.3f  DataTime: %.3f '
+            .. '  Global_MSE: %.4f Local_MSE: %.4f PSNR: %.4f'):format(
+            epoch, ((i-1) / opt.batchSize),
+            math.floor(math.min(data:size(), opt.ntrain) / opt.batchSize),
+            tm:time().real, data_tm:time().real,
+            err_g or -1, err_l and err_l / rho or -1, psnr and psnr or -1))
+      end
+    end
+    --paths.mkdir('checkpoints')
+
+    if epoch % opt.epoch == 0 then
+      torch.save('/content/drive/MyDrive/model/' .. opt.name .. '_' .. epoch .. '_RNN.t7', thin_model)
+    end
+
+    print(('End of epoch %d / %d \t Time Taken: %.3f'):format(
+      epoch, opt.niter, epoch_tm:time().real))
 end
 			
 -- local visited_map0 = torch.zeros(opt.batchSize,1,highResSize[1],highResSize[2])	
