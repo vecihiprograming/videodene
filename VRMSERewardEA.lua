@@ -52,9 +52,9 @@ function VRMSEReward:updateOutput(inputTable, target)
    --print('area',area)
    self.reward:add(self.areaScale,area) -- 4 = area reward scale
    -- areascale ile area çarptı + reward yaptı
-	print('BURADAAAAAAAAAAAAAAA')
+	--print('BURADAAAAAAAAAAAAAAA')
    self.output = self.errorC:forward(input,target) -- mse bu
-   print(self.output)
+   --print(self.output)
    return self.output
 end
 

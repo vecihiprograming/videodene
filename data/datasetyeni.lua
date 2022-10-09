@@ -208,7 +208,7 @@ function dataset:__init(...)
    self.classList = {}                  -- index of imageList to each image of a particular class
    self.classListSample = self.classList -- the main list used when sampling data
 
-   --print('running "find" on each class directory, and concatenate all'
+   print('running "find" on each class directory, and concatenate all'
          .. ' those filenames into a single file containing all image paths for a given class')
    -- so, generat
    local classFindFiles = {}
