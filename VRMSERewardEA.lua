@@ -47,7 +47,7 @@ function VRMSEReward:updateOutput(inputTable, target)
    self.reward:add(4) -- pixel ~ [-1, 1], thus error^2 are <= 4 MSE diyebiliriz
    --print('self.reward:add(4)',self.reward)
    
-   local area = map:sum(5):sum(4):sum(3):sum(2):div(opt.highResSize[1]*opt.highResSize[2]) -- tum map toplanip/128*128 bolunuyor
+   local area = map:sum(4):sum(3):sum(2):div(opt.highResSize[1]*opt.highResSize[2]) -- tum map toplanip/128*128 bolunuyor
    area = area:view(-1)
    --print('area',area)
    self.reward:add(self.areaScale,area) -- 4 = area reward scale
