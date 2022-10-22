@@ -13,14 +13,14 @@ util = paths.dofile('util.lua')
 -- nngraph.setDebug(true)
 opt = lapp[[
    --randomize                (default 1)         batch size
-   -b,--batchSize             (default 2)         batch size
+   -b,--batchSize             (default 10)         batch size
    --frameSize                (default 3)         frame size
    --oW                		  (default 128)         batch size
    --oH                       (default 96)         batch size
    -r,--lr                    (default 0.0002)    learning rate
 
    --dataset                  (default 'folder')  imagenet / lsun / folder
-   --nThreads                 (default 1)         # of data loading threads to use
+   --nThreads                 (default 4)         # of data loading threads to use
 
    --beta1                    (default 0.5)       momentum term of adam
    --ntrain                   (default math.huge) #  of examples per epoch. math.huge for full dataset
@@ -36,7 +36,7 @@ opt = lapp[[
    --epoch                    (default 1)         save checkpoints every N epoch
    --nc                       (default 3)         number of input image channels (RGB/Grey)
 
-   --niter                    (default 1)  maximum number of iterations
+   --niter                    (default 250)  maximum number of iterations
 
    --rewardScale              (default 1)     scale of positive reward (negative is 0)
    --rewardAreaScale          (default 4)     scale of aree reward
@@ -75,10 +75,10 @@ opt.lowResSize = {16, 16}
 
 -- create data loader
 local DataLoader = paths.dofile('data/data2.lua')
-opt.data = './azdata/train/'
+opt.data = './videostraintest/train/'
 local data = DataLoader.new(opt.nThreads, opt.dataset, opt)
 print("DatasetTrain: " .. opt.dataset, " Size: ", data:size())
-opt.data = './azdata/test/'
+opt.data = './videostraintest/test/'
 local dataTest = DataLoader.new(opt.nThreads, opt.dataset, opt)
 print("DatasetTest: " .. opt.dataset, " Size: ", dataTest:size())
 --------------------------------------------------------------
@@ -294,6 +294,8 @@ model = nn.gModule({video_loc_prev,video_pre,video,
 model:apply(weights_init)
 model.name = 'fullmodel'
 model = nn.Recursor(model, opt.rho)			
+
+--model = torch.load('/content/drive/MyDrive/model/fullmodel_1_RNN.t7')
 			
 gt_glimpse= nn.SpatialGlimpse(opt.glimpsePatchSize, opt.glimpseDepth, opt.glimpseScale)			
 
@@ -442,9 +444,9 @@ function test()
 	psnr = 0
 	model:evaluate()
 	miktar=0
-	paths.mkdir(opt.name)	
+	paths.mkdir(opt.name)
+  --print('dataTest:size():',dataTest:size())
 	for st = 1,dataTest:size(),opt.batchSize do
-		
 		model:forget()
 		xlua.progress(st,dataTest:size())
 		--fetch data
@@ -457,9 +459,11 @@ function test()
 		quantity = i2 - st + 1
 		miktar=miktar+quantity
 		highRes, impath,scaLabels = dataTest:getIndice({st,i2})	-- batchsıze kadar
+    
 		lowRes = highRes:clone()
 		for basize=1,opt.batchSize do
 			for fr=1,opt.frameSize do
+        --print('EMREEEEEE',highRes:size())
 				temp = image.scale(highRes[basize][fr], opt.lowResSize[2], opt.lowResSize[1])
 				lowRes[basize][fr] = image.scale(temp, opt.highResSize[2], opt.highResSize[1], 'bicubic')
 			end
@@ -522,8 +526,8 @@ function test()
         for i = 1,quantity do
 			--print(impath[i])
 			--print(paths.basename(impath[i]))
-			os.execute("rm -r " .. opt.name..'/'.. paths.basename(impath[i]))
-			os.execute("mkdir " .. opt.name..'/'.. paths.basename(impath[i]))
+			--os.execute("rm -r " .. opt.name..'/'.. paths.basename(impath[i]))
+			--os.execute("mkdir " .. opt.name..'/'.. paths.basename(impath[i]))
 
             -- 10* log10( 255^2 / (mse * (255/2)^2) )
             psnr = psnr + 10 * math.log10(4 / MSEcriterion:forward(videonexts[i], highRes[i]))
@@ -531,7 +535,7 @@ function test()
                 for j=1,opt.frameSize do
                     local img = videonexts[{{i},{j},{}}]:reshape(3,highResSize[1],highResSize[2])
                     img:add(1):div(2)
-                    image.save(opt.name..'/'.. paths.basename(impath[i]).. '/' .. 'im' .. j .. '.png', img)         
+                    --image.save(opt.name..'/'.. paths.basename(impath[i]).. '/' .. 'im' .. j .. '.png', img)         
                     --image.save(opt.name..'/'..paths.basename(impath[i]..'/' .. 'im' .. j .. '.png'), img) 					          
                 end
 
